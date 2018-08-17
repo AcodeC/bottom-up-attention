@@ -35,8 +35,8 @@ FIELDNAMES = ['image_id', 'image_w','image_h','num_boxes', 'boxes', 'features']
 
 # Settings for the number of features per image. To re-create pretrained features with 36 features
 # per image, set both values to 36. 
-MIN_BOXES = 10
-MAX_BOXES = 100
+MIN_BOXES = 36
+MAX_BOXES = 36
 
 def load_image_ids(split_name):
     ''' Load a list of (path,image_id tuples). Modify this to suit your data locations. '''
@@ -67,7 +67,6 @@ def load_image_ids(split_name):
 
     
 def get_detections_from_im(net, im_file, image_id, conf_thresh=0.2):
-
     im = cv2.imread(im_file)
     scores, boxes, attr_scores, rel_scores = im_detect(net, im)
 
