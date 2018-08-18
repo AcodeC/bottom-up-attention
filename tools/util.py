@@ -4,6 +4,7 @@ import numpy as np
 
 import _init_paths
 import caffe
+import json
 from fast_rcnn.config import cfg, cfg_from_file
 from fast_rcnn.test import im_detect, _get_blobs
 from fast_rcnn.nms_wrapper import nms
@@ -29,17 +30,13 @@ def _boxes2sfeat(boxes, im):
     return sfeat
 
 
-def get_img_names_list(gt_file_path, img_path):
+def get_img_names_list(img_path_json, img_root_path):
     img_names = []
 
-    gt_file = open(gt_file_path)
-
-    for line in gt_file:
-        # split, isfind, imgid, filename, raw, parser_gt = line.split('\t')
-        filename = line.split('\t')[3]
-
-        if filename[-2:] == '#0':
-            img_names.append(os.path.join(img_path, filename[:-2]))
+    with open(img_path_json, 'r') as fp:
+        filename_list = json.load(fp)
+        for filename in filename_list['images_path']:
+            img_names.append(os.path.join(img_root_path, filename))
 
     return img_names
 
