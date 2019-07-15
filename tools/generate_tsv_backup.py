@@ -35,9 +35,8 @@ FIELDNAMES = ['image_id', 'image_w', 'image_h', 'num_boxes', 'boxes', 'features'
 
 # Settings for the number of features per image. To re-create pretrained features with 36 features
 # per image, set both values to 36. 
-MIN_BOXES = 36
-MAX_BOXES = 36
-
+MIN_BOXES = 10
+MAX_BOXES = 100
 
 def load_image_ids(split_name):
     ''' Load a list of (path,image_id tuples). Modify this to suit your data locations. '''
@@ -99,12 +98,45 @@ def get_detections_from_im(net, im_file, image_id, conf_thresh=0.2):
         'image_id': image_id,
         'image_h': np.size(im, 0),
         'image_w': np.size(im, 1),
-        'num_boxes': len(keep_boxes),
+        'num_boxes' : len(keep_boxes),
         'boxes': base64.b64encode(cls_boxes[keep_boxes]),
         'features': base64.b64encode(pool5[keep_boxes])
     }   
 
 
+def parse_args():
+    """
+    Parse input arguments
+    """
+    parser = argparse.ArgumentParser(description='Generate bbox output from a Fast R-CNN network')
+    parser.add_argument('--gpu', dest='gpu_id', help='GPU id(s) to use',
+                        default='0', type=str)
+    parser.add_argument('--def', dest='prototxt',
+                        help='prototxt file defining the network',
+                        default=None, type=str)
+    parser.add_argument('--net', dest='caffemodel',
+                        help='model to use',
+                        default=None, type=str)
+    parser.add_argument('--out', dest='outfile',
+                        help='output filepath',
+                        default=None, type=str)
+    parser.add_argument('--cfg', dest='cfg_file',
+                        help='optional config file', default=None, type=str)
+    parser.add_argument('--split', dest='data_split',
+                        help='dataset to use',
+                        default='karpathy_train', type=str)
+    parser.add_argument('--set', dest='set_cfgs',
+                        help='set config keys', default=None,
+                        nargs=argparse.REMAINDER)
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    args = parser.parse_args()
+    return args
+
+    
 def generate_tsv(gpu_id, prototxt, weights, image_ids, outfile):
     # First check if file exists, and if it is complete
     wanted_ids = set([int(image_id[1]) for image_id in image_ids])
@@ -138,6 +170,8 @@ def generate_tsv(gpu_id, prototxt, weights, image_ids, outfile):
                               _t['misc'].average_time*(len(missing)-count)/3600)
                     count += 1
 
+                    
+
 
 def merge_tsvs():
     test = ['/work/data/tsv/test2015/resnet101_faster_rcnn_final_test.tsv.%d' % i for i in range(8)]
@@ -155,46 +189,8 @@ def merge_tsvs():
                     except Exception as e:
                       print e                           
 
-
-def parse_args():
-    """
-    Parse input arguments
-    """
-    parser = argparse.ArgumentParser(description='Generate bbox output from a Fast R-CNN network')
-    parser.add_argument('--gpu', dest='gpu_id', help='GPU id(s) to use',
-                        default='0', type=str)
-
-    parser.add_argument('--def', dest='prototxt',
-                        help='prototxt file defining the network',
-                        default='../models/vg/ResNet-101/faster_rcnn_end2end/test.prototxt', type=str)
-
-    parser.add_argument('--net', dest='caffemodel',
-                        help='model to use',
-                        default='../data/faster_rcnn_models/resnet101_faster_rcnn_final.caffemodel', type=str)
-
-    parser.add_argument('--out', dest='outfile',
-                        help='output filepath',
-                        default='../test2014_resnet101_faster_rcnn_genome.tsv', type=str)
-
-    parser.add_argument('--cfg', dest='cfg_file',
-                        help='optional config file', default='../experiments/cfgs/faster_rcnn_end2end_resnet.yml', type=str)
-
-    parser.add_argument('--split', dest='data_split',
-                        help='dataset to use',
-                        default='karpathy_train', type=str)
-
-    parser.add_argument('--set', dest='set_cfgs',
-                        help='set config keys', default=None,
-                        nargs=argparse.REMAINDER)
-
-    # if len(sys.argv) == 1:
-    #     parser.print_help()
-    #     sys.exit(1)
-
-    args = parser.parse_args()
-    return args
-
-
+                      
+     
 if __name__ == '__main__':
 
     args = parse_args()
@@ -225,7 +221,7 @@ if __name__ == '__main__':
     caffe.log('Using devices %s' % str(gpus))
     procs = []    
     
-    for i, gpu_id in enumerate(gpus):
+    for i,gpu_id in enumerate(gpus):
         outfile = '%s.%d' % (args.outfile, gpu_id)
         p = Process(target=generate_tsv,
                     args=(gpu_id, args.prototxt, args.caffemodel, image_ids[i], outfile))
@@ -233,4 +229,5 @@ if __name__ == '__main__':
         p.start()
         procs.append(p)
     for p in procs:
-        p.join()
+        p.join()            
+                  
