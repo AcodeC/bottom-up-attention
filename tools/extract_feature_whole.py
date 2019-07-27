@@ -52,28 +52,23 @@ net = caffe.Net(prototxt, caffe.TEST, weights=weights)
 # DON'T FORGET CHANGE PATH!!!
 gt_file_path = '/home/lab/dQ_IC/0_dataset/Flickr30k/gt.token'
 img_path = '/home/lab/dQ_IC/0_dataset/Flickr30k/flickr30k_images'
-feat_file_path = '/home/lab/dQ_IC/0_dataset/Flickr30k/flickr30k.h5'
+feat_file_path = '/home/lab/dQ_IC/0_dataset/Flickr30k/bt.h5'
 
 VFEAT_DIM = 2048
 SFEAT_DIM = 5
 n_box = 36
 
-h5_flie = h5py.File(feat_file_path, 'w')
-vfeat_dataset = h5_flie.create_dataset("vfeat", (0, n_box, VFEAT_DIM),
-                                       maxshape=(None, n_box, VFEAT_DIM),
-                                       dtype='float32')
-sfeat_dataset = h5_flie.create_dataset("sfeat", (0, n_box, SFEAT_DIM),
-                                       maxshape=(None, n_box, SFEAT_DIM),
-                                       dtype='float32')
-h5_flie.close()
-
 print "Begin extract image features..."
 img_names = get_img_names_list(gt_file_path, img_path)
+img_names = img_names[0:30]
 
 # Warmup on a dummy image
 im = 128 * np.ones((500, 500, 3), dtype=np.uint8)
 for i in xrange(2):
     _, _, _, _ = im_detect(net, im)
+
+sfeat_all = np.zeros((len(img_names), n_box, SFEAT_DIM))
+vfeat_all = np.zeros((len(img_names), n_box, VFEAT_DIM))
 
 # extract image features one by one
 for idx, im_name in enumerate(img_names):
@@ -81,19 +76,13 @@ for idx, im_name in enumerate(img_names):
     vfeat, sfeat = extract_fea(net, im_name)
     # print im_name
 
-    # save each feature to a h5 file
-    h5_flie = h5py.File(feat_file_path, 'a')
-    vfeat_dataset = h5_flie['vfeat']
-    sfeat_dataset = h5_flie['sfeat']
-
-    vfeat_dataset.resize([idx + 1, n_box, VFEAT_DIM])
-    sfeat_dataset.resize([idx + 1, n_box, SFEAT_DIM])
-
-    vfeat_dataset[idx] = vfeat
-    sfeat_dataset[idx] = sfeat
-
-    h5_flie.close()
+    sfeat_all[idx] = sfeat
+    vfeat_all[idx] = vfeat
 
     if idx % 10 == 0:
         print '{:d}/{:d}'.format(idx, len(img_names))
-    # print '{:d}/{:d}'.format(idx, len(img_names))
+
+feat_file = h5py.File(feat_file_path, 'w')
+feat_file['vfeat'] = vfeat_all
+feat_file['sfeat'] = sfeat_all
+feat_file.close()
